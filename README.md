@@ -32,6 +32,37 @@ motion capture system, validated both on real hardware and in Gazebo simulation.
   flown trajectory re-exported in the same format as the planned path, a trajectory plot
   (planned path vs obstacles vs flown trail), and a cross-track/altitude error plot.
 
+## Simulation setup
+
+The Gazebo side depends on a third-party ROS2/Gazebo bridge package (not part of this repo):
+
+```bash
+cd ~/ros2_ws/src
+git clone https://github.com/knmcguire/ros_gz_crazyflie
+cd ~/ros2_ws && colcon build --symlink-install
+```
+
+Copy `simulation/worlds/crazyflie_world.sdf` from this repo over the package's own
+`ros_gz_crazyflie_gazebo/share/ros_gz_crazyflie_gazebo/worlds/crazyflie_world.sdf` (installed
+copy) to get the resized room and the 3 obstacle boxes used in the `obs1`/`obs3` runs.
+
+The package's launch file loads `model://crazyflie` without setting the Gazebo model search
+path, which fails out of the box (`Unable to find uri[model://crazyflie]`). Work around it by
+exporting the resource path before launching:
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/setup.bash
+export GZ_SIM_RESOURCE_PATH="$HOME/ros2_ws/src/ros_gz_crazyflie/ros_gz_crazyflie_gazebo/models:$GZ_SIM_RESOURCE_PATH"
+ros2 launch ros_gz_crazyflie_bringup crazyflie_simulation.launch.py
+```
+
+Then, in another terminal:
+
+```bash
+python3 simulation/coverage_guidance_sim_refined.py <path_csv> <log_csv> [plot_png] [ox,oy,size ...]
+```
+
 ## Guidance approach
 
 Both the real-flight and simulation guidance controllers:
