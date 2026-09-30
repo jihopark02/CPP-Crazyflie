@@ -9,21 +9,26 @@ motion capture system, validated both on real hardware and in Gazebo simulation.
   [cflib](https://github.com/bitcraze/crazyflie-lib-python) and a vendored NatNet client
   (no ROS2 in the loop). Position/orientation comes from Motive over NatNet and is fed into
   the onboard EKF via `extpos`.
-  - `direct_cflib_fly.py` — basic takeoff/hover sanity check
-  - `direct_cflib_waypoints.py` — PID waypoint-to-waypoint navigation
-  - `direct_cflib_square.py`, `direct_cflib_l1_square.py` — rectangle path via classic L1 guidance
-  - `direct_cflib_coverage.py` — L1 guidance over a full boustrophedon coverage path
-  - `direct_cflib_coverage_refined.py` / `direct_cflib_coverage_refined2.py` — improved guidance:
-    projects onto path *segments* (not just nearest point) and adds an explicit cross-track
-    P-correction term, converted from world-frame to the drone's body-frame velocity setpoint
+  Files are numbered in the order you'd actually try them, each building on the last:
+  - `01_takeoff_hover.py` — basic takeoff/hover sanity check (start here)
+  - `02_square_motioncommander.py` — rectangle path via cflib's `MotionCommander` (body-frame moves)
+  - `03_waypoint_pid_navigation.py` — PID waypoint-to-waypoint navigation, always facing travel direction
+  - `04_rectangle_l1_guidance.py` — rectangle path via classic L1 nonlinear guidance
+  - `05_coverage_l1_guidance.py` — classic L1 guidance over a full boustrophedon coverage path
+  - `06_coverage_crosstrack_guidance.py` — improved guidance: projects onto path *segments* (not
+    just nearest point) and adds an explicit cross-track P-correction term, converted from
+    world-frame to the drone's body-frame velocity setpoint, plus automatic corner slowdown
+  - `07_coverage_crosstrack_guidance_final.py` — same as above, used for all real-flight
+    coverage runs; adds explicit estimator/arming setup and full CSV logging
   - `plot_flight_error.py` — reads a flight log CSV and plots cross-track / altitude error vs time
   - `paths/` — coverage paths (CSV + original Excel source), including obstacle-avoidance variants
 
 - **`simulation/`** — Gazebo (ros_gz) validation of the same guidance approach.
-  - `coverage_guidance_sim_live.py` — original classic-L1 sim harness
-  - `coverage_guidance_sim_refined.py` — same segment-projection + cross-track-correction
-    guidance as the real-flight refined2 script, ported to ROS2 `/cmd_vel` (Twist), **without**
-    the corner-deceleration feature
+  - `coverage_l1_guidance_sim.py` — original classic-L1 sim harness (same algorithm as
+    `05_coverage_l1_guidance.py`, ported to ROS2 `/cmd_vel`)
+  - `coverage_crosstrack_guidance_sim.py` — same segment-projection + cross-track-correction
+    guidance as `06`/`07`, ported to ROS2 `/cmd_vel` (Twist), **without** the corner-deceleration
+    feature — this is what produced the `results/` below
   - `plot_sim_error.py` — error analysis for sim flight logs
   - `worlds/crazyflie_world.sdf` — Gazebo world with 3 box obstacles for obstacle-avoidance testing
 
@@ -60,7 +65,7 @@ ros2 launch ros_gz_crazyflie_bringup crazyflie_simulation.launch.py
 Then, in another terminal:
 
 ```bash
-python3 simulation/coverage_guidance_sim_refined.py <path_csv> <log_csv> [plot_png] [ox,oy,size ...]
+python3 simulation/coverage_crosstrack_guidance_sim.py <path_csv> <log_csv> [plot_png] [ox,oy,size ...]
 ```
 
 ## Guidance approach
@@ -72,7 +77,7 @@ Both the real-flight and simulation guidance controllers:
 2. Command a velocity that combines a constant along-path speed with a proportional
    cross-track correction term (capped to a max lateral speed), converted from world frame
    to the vehicle's body frame.
-3. (Real-flight refined2 only) Automatically slow down when the upcoming path direction
+3. (Real-flight `06`/`07` only) Automatically slow down when the upcoming path direction
    changes sharply (corners); the simulation port omits this for a simpler baseline.
 
 ## Validation results (simulation)
@@ -83,7 +88,7 @@ Both the real-flight and simulation guidance controllers:
 | obs1 | 1 | completed, min clearance ~22 cm | ~1.0 cm |
 | obs3 | 3 | completed, min clearance ~22 cm | ~1.1 cm |
 
-On real hardware, the same refined2 guidance completed a 3m x 2m rectangle and multiple
+On real hardware, the same `07_coverage_crosstrack_guidance_final.py` guidance completed a 3m x 2m rectangle and multiple
 2.5cm-resolution coverage paths cleanly, with cross-track error on the order of a few
 centimeters and no safety cutoffs triggered by tilt or position error (battery voltage was
 the only real-world failure mode encountered).
