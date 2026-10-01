@@ -16,8 +16,8 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
     `PathGuidance`(선분 투영 + 횡오차 P 보정, 코너 자동감속)를 사용하고, 추정기/아밍 설정과
     전체 CSV 로깅을 포함. 모든 실비행 커버리지 테스트(obs0/obs1/obs3)에 실제로 사용된 버전
   - `plot_flight_error.py` — 비행 로그 CSV를 읽어서 cross-track/고도 오차를 시간축 그래프로 그림
-  - `paths/` — 커버리지 경로 (CSV + 원본 엑셀), 장애물 회피 변형 경로 포함
-  - `results/` — obs0/obs1/obs3 실비행 결과 (비행 로그 CSV+엑셀, 실비행 궤적 엑셀, 오차 그래프)
+  - `paths/` — obs0/obs1/obs3 커버리지 경로 CSV
+  - `results/` — obs0/obs1/obs3 실비행 결과 (비행 로그 CSV, 궤적 및 오차 그래프)
 
 - **`sitl/`** — 같은 유도 알고리즘을 Gazebo(ros_gz)에서 검증한 코드입니다.
   - `coverage_crosstrack_guidance_sim.py` — `07`과 같은 `PathGuidance`(선분투영+횡오차보정)를
@@ -27,8 +27,7 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
   - `worlds/crazyflie_world.sdf` — 장애물 박스 3개가 있는 Gazebo 월드 (장애물 회피 테스트용)
 
 - **`sitl/results/`** — 시나리오별 시뮬레이션 결과 (`obs0`: 장애물 없음, `obs1`: 장애물 1개,
-  `obs3`: 장애물 3개). 각각 비행 로그(CSV + 엑셀), 계획 경로와 같은 포맷으로 재추출한
-  실제 비행 궤적, 궤적 그래프(계획경로 vs 장애물 vs 실비행궤적), cross-track/고도 오차
+  `obs3`: 장애물 3개). 각각 비행 로그 CSV, 궤적 그래프(계획경로 vs 장애물 vs 비행궤적), cross-track/고도 오차
   그래프를 담고 있습니다.
 
 ## 시뮬레이션 환경 설정
@@ -85,7 +84,7 @@ python3 sitl/coverage_crosstrack_guidance_sim.py <path_csv> <log_csv> [plot_png]
 ## 검증 결과 (실비행)
 
 같은 `07_coverage_crosstrack_guidance_final.py`로 obs0/obs1/obs3 경로를 전부 완주했습니다.
-자세한 로그/엑셀/그래프는 `real-flight/results/`에 있습니다.
+자세한 로그와 그래프는 `real-flight/results/`에 있습니다.
 
 | 시나리오 | 평균 cross-track error | 최대 cross-track error | 평균 고도 오차 |
 |---|---|---|---|

@@ -58,6 +58,8 @@ python main.py
 
 ## 출력 형식 (`path/*.xlsx`)
 
+실행 중 생성되는 XLSX 파일은 로컬 산출물이며 Git 저장소에는 포함하지 않습니다.
+
 - `path` 시트: `index`, `x_m`, `y_m`, `dist_along_path_m` — 왼쪽 아래 원점, y축 위쪽 증가
 - `meta` 시트: 맵 크기, 셀 크기, 점 간격, 점 개수, 전체 경로 길이
 
