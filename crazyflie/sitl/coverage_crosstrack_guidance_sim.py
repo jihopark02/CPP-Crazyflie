@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
 Gazebo 시뮬레이션 -- 경로 오차 개선판 유도 (코너 감속 제외)
-coverage_guidance_sim_live.py의 ROS2/시각화 하네스는 그대로 두고,
-유도부만 direct_cflib_coverage_refined2.py의 PathGuidance로 교체했다.
+ROS2/시각화 하네스와 공통 tracking 모듈의 PathGuidance를 결합한다.
   1. 가장 가까운 경로 '점' 대신 경로 '선분'에 현재 위치를 투영
   2. 경로 접선 속도 + 횡오차 보정 속도를 동시에 명령 (linear.y로 직접 횡이동)
   3. 코너 자동감속은 포함하지 않음 -- 순항속도 V 항상 고정

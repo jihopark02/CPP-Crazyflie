@@ -12,16 +12,16 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
 - **`real-flight/`** — ROS2를 거치지 않고 [cflib](https://github.com/bitcraze/crazyflie-lib-python)과
   vendored NatNet 클라이언트로 실제 드론을 직접 비행시키는 독립 실행 스크립트입니다.
   위치/자세는 Motive에서 NatNet으로 받아 `extpos`를 통해 온보드 EKF에 주입합니다.
-  - `07_coverage_crosstrack_guidance_final.py` — 최종 실비행 유도 스크립트. `tracking/`의
-    `PathGuidance`(선분 투영 + 횡오차 P 보정, 코너 자동감속)를 사용하고, 추정기/아밍 설정과
-    전체 CSV 로깅을 포함. 모든 실비행 커버리지 테스트(obs0/obs1/obs3)에 실제로 사용된 버전
+  - `coverage_flight.py` — 최종 실비행 스크립트. `tracking/`의 `PathGuidance`가 계산한
+    경로 투영점과 진행 방향을 이용해 횡오차 P 보정, 코너 감속 및 속도 명령을 수행하며,
+    추정기/아밍 설정과 전체 CSV 로깅을 포함. 모든 실비행 테스트(obs0/obs1/obs3)에 사용된 버전
   - `plot_flight_error.py` — 비행 로그 CSV를 읽어서 cross-track/고도 오차를 시간축 그래프로 그림
   - `paths/` — obs0/obs1/obs3 커버리지 경로 CSV
   - `results/` — obs0/obs1/obs3 실비행 결과 (비행 로그 CSV, 궤적 및 오차 그래프)
 
 - **`sitl/`** — 같은 유도 알고리즘을 Gazebo(ros_gz)에서 검증한 코드입니다.
-  - `coverage_crosstrack_guidance_sim.py` — `07`과 같은 `PathGuidance`(선분투영+횡오차보정)를
-    ROS2 `/cmd_vel`(Twist)로 이식한 최종 시뮬레이션 스크립트, **코너 감속 기능은 제외** —
+  - `coverage_crosstrack_guidance_sim.py` — 같은 `PathGuidance`를 사용해 횡오차 보정 결과를
+    ROS2 `/cmd_vel`(Twist)로 출력하는 최종 시뮬레이션 스크립트, **코너 감속 기능은 제외** —
     아래 `sitl/results/` 결과가 이 스크립트로 나온 것입니다
   - `plot_sim_error.py` — 시뮬레이션 비행 로그 오차 분석
   - `worlds/crazyflie_world_obs{0,1,3}.sdf` — 시나리오별 Gazebo 월드 (obs0: 장애물 없음,
@@ -78,7 +78,7 @@ python3 sitl/coverage_crosstrack_guidance_sim.py <path_csv> <log_csv> [plot_png]
    뒤로 튀지 않도록 함
 2. 일정한 경로방향 속도 + 비례(P) 횡오차 보정 속도(최대 횡속도로 제한)를 합성해서
    world frame에서 body frame으로 변환한 속도를 명령
-3. (실비행 `07`만 해당) 전방 경로 방향이 급격히 바뀌면(코너) 자동으로 감속;
+3. (실비행 `coverage_flight.py`만 해당) 전방 경로 방향이 급격히 바뀌면(코너) 자동으로 감속;
    시뮬레이션 이식 버전은 더 단순한 기준선 비교를 위해 이 기능을 뺐음
 
 ## 검증 결과 (시뮬레이션)
@@ -91,7 +91,7 @@ python3 sitl/coverage_crosstrack_guidance_sim.py <path_csv> <log_csv> [plot_png]
 
 ## 검증 결과 (실비행)
 
-같은 `07_coverage_crosstrack_guidance_final.py`로 obs0/obs1/obs3 경로를 전부 완주했습니다.
+같은 `coverage_flight.py`로 obs0/obs1/obs3 경로를 전부 완주했습니다.
 자세한 로그와 그래프는 `real-flight/results/`에 있습니다.
 
 | 시나리오 | 평균 cross-track error | 최대 cross-track error | 평균 고도 오차 |
