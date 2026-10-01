@@ -5,14 +5,14 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
 
 ## 구조
 
-- **`tracking/`** — SITL과 실비행이 공유하는 플랫폼 독립적인 경로 추종 코어입니다.
+- **`path_guidance.py`** — SITL과 실비행이 공유하는 플랫폼 독립적인 경로 추종 코어입니다.
   `PathGuidance`가 선분 투영, 단조 경로 진행도, lookahead 방향 및 코너 각도를 계산하고,
   `sitl/`과 `real-flight/`의 실행 파일은 각 환경의 위치 입력과 속도 명령만 담당합니다.
 
 - **`real-flight/`** — ROS2를 거치지 않고 [cflib](https://github.com/bitcraze/crazyflie-lib-python)과
   vendored NatNet 클라이언트로 실제 드론을 직접 비행시키는 독립 실행 스크립트입니다.
   위치/자세는 Motive에서 NatNet으로 받아 `extpos`를 통해 온보드 EKF에 주입합니다.
-  - `coverage_flight.py` — 최종 실비행 스크립트. `tracking/`의 `PathGuidance`가 계산한
+  - `coverage_flight.py` — 최종 실비행 스크립트. 공통 `PathGuidance`가 계산한
     경로 투영점과 진행 방향을 이용해 횡오차 P 보정, 코너 감속 및 속도 명령을 수행하며,
     추정기/아밍 설정과 전체 CSV 로깅을 포함. 모든 실비행 테스트(obs0/obs1/obs3)에 사용된 버전
   - `plot_flight_error.py` — 비행 로그 CSV를 읽어서 cross-track/고도 오차를 시간축 그래프로 그림

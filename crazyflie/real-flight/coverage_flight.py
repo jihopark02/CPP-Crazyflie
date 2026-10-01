@@ -25,7 +25,7 @@ CRAZYFLIE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if CRAZYFLIE_ROOT not in sys.path:
     sys.path.insert(0, CRAZYFLIE_ROOT)
 
-from tracking import PathGuidance  # noqa: E402
+from path_guidance import PathGuidance  # noqa: E402
 
 sys.path.insert(0, os.path.expanduser(
     '~/natnet_ws/src/natnet_ros2/deps/NatNetSDK/samples/PythonClient'))

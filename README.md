@@ -8,7 +8,7 @@ Coverage Path Planning(CPP)으로 생성한 경로를 Crazyflie에서 시뮬레�
 .
 ├── cpp/                     # GA-TSP 기반 Coverage Path Planning
 └── crazyflie/
-    ├── tracking/            # SITL·실비행 공통 경로 추종 알고리즘
+    ├── path_guidance.py     # SITL·실비행 공통 경로 추종 알고리즘
     ├── sitl/                # Gazebo/ROS 2 시뮬레이션 및 결과
     │   └── results/
     └── real-flight/         # Crazyflie 실비행 코드와 경로
@@ -20,7 +20,7 @@ Coverage Path Planning(CPP)으로 생성한 경로를 Crazyflie에서 시뮬레�
 
 사다리꼴 셀 분해, GA 기반 TSP-CPP, A* 연결, 곡률 제약 스무딩으로 커버리지 경로를 생성합니다. 자세한 사용법은 [`cpp/README.md`](cpp/README.md)를 참고하세요.
 
-### `crazyflie/tracking/`
+### `crazyflie/path_guidance.py`
 
 SITL과 실비행이 함께 사용하는 선분 투영, 단조 경로 진행도, lookahead 기반 경로 추종 알고리즘을 제공합니다.
 
