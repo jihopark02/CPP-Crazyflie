@@ -20,7 +20,7 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
   - `results/` — obs0/obs1/obs3 실비행 결과 (비행 로그 CSV, 궤적 및 오차 그래프)
 
 - **`sitl/`** — 같은 유도 알고리즘을 Gazebo(ros_gz)에서 검증한 코드입니다.
-  - `coverage_crosstrack_guidance_sim.py` — 같은 `PathGuidance`를 사용해 횡오차 보정 결과를
+  - `coverage_flight_sim.py` — 같은 `PathGuidance`를 사용해 횡오차 보정 결과를
     ROS2 `/cmd_vel`(Twist)로 출력하는 최종 시뮬레이션 스크립트, **코너 감속 기능은 제외** —
     아래 `sitl/results/` 결과가 이 스크립트로 나온 것입니다
   - `plot_sim_error.py` — 시뮬레이션 비행 로그 오차 분석
@@ -67,7 +67,7 @@ ros2 launch ros_gz_crazyflie_bringup crazyflie_simulation.launch.py
 그 다음 다른 터미널에서:
 
 ```bash
-python3 sitl/coverage_crosstrack_guidance_sim.py <path_csv> <log_csv> [plot_png] [ox,oy,size ...]
+python3 sitl/coverage_flight_sim.py <path_csv> <log_csv> [plot_png] [ox,oy,size ...]
 ```
 
 ## 유도 알고리즘
