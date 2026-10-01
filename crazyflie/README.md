@@ -17,6 +17,7 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
     전체 CSV 로깅을 포함. 모든 실비행 커버리지 테스트(obs0/obs1/obs3)에 실제로 사용된 버전
   - `plot_flight_error.py` — 비행 로그 CSV를 읽어서 cross-track/고도 오차를 시간축 그래프로 그림
   - `paths/` — 커버리지 경로 (CSV + 원본 엑셀), 장애물 회피 변형 경로 포함
+  - `results/` — obs0/obs1/obs3 실비행 결과 (비행 로그 CSV+엑셀, 실비행 궤적 엑셀, 오차 그래프)
 
 - **`sitl/`** — 같은 유도 알고리즘을 Gazebo(ros_gz)에서 검증한 코드입니다.
   - `coverage_crosstrack_guidance_sim.py` — `07`과 같은 `PathGuidance`(선분투영+횡오차보정)를
@@ -81,7 +82,18 @@ python3 sitl/coverage_crosstrack_guidance_sim.py <path_csv> <log_csv> [plot_png]
 | obs1 | 1개 | 완주, 최소 이격거리 약 22 cm | 약 1.0 cm |
 | obs3 | 3개 | 완주, 최소 이격거리 약 22 cm | 약 1.1 cm |
 
-실제 하드웨어에서도 같은 `07_coverage_crosstrack_guidance_final.py` 유도로 3m x 2m
-사각형 경로와 2.5cm 해상도 커버리지 경로 여러 개를 문제없이 완주했으며, cross-track
-오차는 수 센티미터 수준이었고 기울기나 위치오차로 인한 안전 컷오프는 한 번도 발생하지
-않았습니다.
+## 검증 결과 (실비행)
+
+같은 `07_coverage_crosstrack_guidance_final.py`로 obs0/obs1/obs3 경로를 전부 완주했습니다.
+자세한 로그/엑셀/그래프는 `real-flight/results/`에 있습니다.
+
+| 시나리오 | 평균 cross-track error | 최대 cross-track error | 평균 고도 오차 |
+|---|---|---|---|
+| obs0 | 1.2 cm | 3.1 cm | 0.5 cm |
+| obs1 | 1.1 cm | 4.1 cm | 0.5 cm |
+| obs3 | 1.3 cm | 4.2 cm | 0.4 cm |
+
+실비행 오차가 시뮬레이션보다 작게 나온 건 모캡(OptiTrack)으로 들어오는 위치/자세 측정값이
+Gazebo 시뮬레이션의 추정치보다 더 정확하기 때문으로 보이며, 기울기나 위치오차로 인한
+안전 컷오프는 한 번도 발생하지 않았습니다 (실비행에서 유일했던 실패 원인은 배터리 전압
+저하였습니다).
