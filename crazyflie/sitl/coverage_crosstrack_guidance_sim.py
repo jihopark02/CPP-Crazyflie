@@ -7,9 +7,9 @@ coverage_guidance_sim_live.py의 ROS2/시각화 하네스는 그대로 두고,
   2. 경로 접선 속도 + 횡오차 보정 속도를 동시에 명령 (linear.y로 직접 횡이동)
   3. 코너 자동감속은 포함하지 않음 -- 순항속도 V 항상 고정
 """
-import bisect
 import csv
 import math
+import os
 import sys
 import time
 import rclpy
@@ -19,6 +19,12 @@ from geometry_msgs.msg import Twist
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+CRAZYFLIE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if CRAZYFLIE_ROOT not in sys.path:
+    sys.path.insert(0, CRAZYFLIE_ROOT)
+
+from tracking import PathGuidance  # noqa: E402
 
 ROBOT_NS = 'crazyflie'
 PATH_CSV = sys.argv[1] if len(sys.argv) > 1 else '/home/won/robotics/flight_logs/l1_tests/coverage_path.csv'
@@ -70,81 +76,17 @@ def quat_to_yaw(q):
     return math.atan2(siny_cosp, cosy_cosp)
 
 
-class PathGuidance:
-    """단조 증가하는 경로 진행도와 선분 투영 기반 유도 (코너 감속 없음)."""
-
-    def __init__(self, path, dist):
-        self.path = path
-        self.dist = dist
-        self.n = len(path)
-        self.path_idx = 0
-        self.progress_s = dist[0]
-
-    @staticmethod
-    def _project_segment(x, y, ax, ay, bx, by):
-        abx, aby = bx - ax, by - ay
-        length_sq = abx * abx + aby * aby
-        if length_sq < 1e-12:
-            return ax, ay, 0.0, math.hypot(x - ax, y - ay)
-        u = clamp(((x - ax) * abx + (y - ay) * aby) / length_sq, 0.0, 1.0)
-        qx, qy = ax + u * abx, ay + u * aby
-        return qx, qy, u, math.hypot(x - qx, y - qy)
-
-    def _point_at_s(self, s):
-        s = clamp(s, self.dist[0], self.dist[-1])
-        i = clamp(bisect.bisect_right(self.dist, s) - 1, 0, self.n - 2)
-        ds = self.dist[i + 1] - self.dist[i]
-        u = 0.0 if ds <= 1e-12 else (s - self.dist[i]) / ds
-        ax, ay = self.path[i]
-        bx, by = self.path[i + 1]
-        return ax + u * (bx - ax), ay + u * (by - ay), i
-
-    def update(self, x, y):
-        hi_s = self.progress_s + FORWARD_SEARCH_DIST_M
-        end = self.path_idx
-        while end < self.n - 2 and self.dist[end + 1] <= hi_s:
-            end += 1
-
-        best = None
-        for i in range(self.path_idx, end + 1):
-            ax, ay = self.path[i]
-            bx, by = self.path[i + 1]
-            qx, qy, u, distance = self._project_segment(x, y, ax, ay, bx, by)
-            segment_ds = self.dist[i + 1] - self.dist[i]
-            projected_s = self.dist[i] + u * segment_ds
-            if projected_s + 1e-9 < self.progress_s:
-                continue
-            if best is None or distance < best[0]:
-                best = (distance, i, projected_s, qx, qy)
-
-        if best is None:
-            qx, qy, i = self._point_at_s(self.progress_s)
-        else:
-            _, i, projected_s, qx, qy = best
-            self.progress_s = max(self.progress_s, projected_s)
-            self.path_idx = i
-
-        target_s = min(self.progress_s + L1, self.dist[-1])
-        target_x, target_y, _ = self._point_at_s(target_s)
-
-        tx, ty = target_x - qx, target_y - qy
-        tangent_norm = math.hypot(tx, ty)
-        if tangent_norm < 1e-9:
-            ax, ay = self.path[self.path_idx]
-            bx, by = self.path[min(self.path_idx + 1, self.n - 1)]
-            tx, ty = bx - ax, by - ay
-            tangent_norm = max(math.hypot(tx, ty), 1e-9)
-        tx, ty = tx / tangent_norm, ty / tangent_norm
-
-        return qx, qy, target_x, target_y, tx, ty
-
-
 class CoverageGuidanceSim(Node):
     def __init__(self):
         super().__init__('coverage_guidance_sim_refined')
         self.path, self.dist = load_path(PATH_CSV, ORIGIN_X, ORIGIN_Y)
         self.n = len(self.path)
-        self.guidance = PathGuidance(self.path, self.dist)
+        self.guidance = PathGuidance(
+            self.path,
+            self.dist,
+            lookahead_distance=L1,
+            forward_search_distance=FORWARD_SEARCH_DIST_M,
+        )
         self.pos = None
         self.z = 0.0
         self.yaw = 0.0
@@ -199,7 +141,7 @@ class CoverageGuidanceSim(Node):
             self.finish('커버리지 경로 완주')
             return
 
-        proj_x, proj_y, ref_x, ref_y, tx, ty = self.guidance.update(x, y)
+        proj_x, proj_y, ref_x, ref_y, tx, ty, _ = self.guidance.update(x, y)
         self.last_target = (ref_x, ref_y)
         self.last_projection = (proj_x, proj_y)
 

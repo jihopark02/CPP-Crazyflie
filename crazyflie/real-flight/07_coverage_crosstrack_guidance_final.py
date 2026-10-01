@@ -9,7 +9,6 @@ cf231 실비행 -- 경로 오차 개선판
   3. world-frame 속도를 hover setpoint의 body-frame vx/vy로 변환
   4. 전방 경로의 방향 변화가 크면 자동 감속
 """
-import bisect
 import sys
 import os
 import csv
@@ -21,6 +20,12 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.ticker import MultipleLocator  # noqa: E402
+
+CRAZYFLIE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if CRAZYFLIE_ROOT not in sys.path:
+    sys.path.insert(0, CRAZYFLIE_ROOT)
+
+from tracking import PathGuidance  # noqa: E402
 
 sys.path.insert(0, os.path.expanduser(
     '~/natnet_ws/src/natnet_ros2/deps/NatNetSDK/samples/PythonClient'))
@@ -161,90 +166,6 @@ def wait_for_position_estimator(cf, timeout=10.0):
                 return False
 
 
-class PathGuidance:
-    """단조 증가하는 경로 진행도와 선분 투영 기반 유도."""
-
-    def __init__(self, path, dist):
-        self.path = path
-        self.dist = dist
-        self.n = len(path)
-        self.path_idx = 0
-        self.progress_s = dist[0]
-
-    @staticmethod
-    def _project_segment(x, y, ax, ay, bx, by):
-        abx = bx - ax
-        aby = by - ay
-        length_sq = abx * abx + aby * aby
-        if length_sq < 1e-12:
-            return ax, ay, 0.0, math.hypot(x - ax, y - ay)
-        u = ((x - ax) * abx + (y - ay) * aby) / length_sq
-        u = clamp(u, 0.0, 1.0)
-        qx = ax + u * abx
-        qy = ay + u * aby
-        return qx, qy, u, math.hypot(x - qx, y - qy)
-
-    def _point_at_s(self, s):
-        s = clamp(s, self.dist[0], self.dist[-1])
-        i = bisect.bisect_right(self.dist, s) - 1
-        i = clamp(i, 0, self.n - 2)
-        ds = self.dist[i + 1] - self.dist[i]
-        u = 0.0 if ds <= 1e-12 else (s - self.dist[i]) / ds
-        ax, ay = self.path[i]
-        bx, by = self.path[i + 1]
-        return ax + u * (bx - ax), ay + u * (by - ay), i
-
-    def update(self, x, y):
-        # 기존 코드처럼 지나온 경로로 path_idx가 되돌아가지 않게 한다.
-        hi_s = self.progress_s + FORWARD_SEARCH_DIST_M
-        end = self.path_idx
-        while end < self.n - 2 and self.dist[end + 1] <= hi_s:
-            end += 1
-
-        best = None
-        for i in range(self.path_idx, end + 1):
-            ax, ay = self.path[i]
-            bx, by = self.path[i + 1]
-            qx, qy, u, distance = self._project_segment(x, y, ax, ay, bx, by)
-            segment_ds = self.dist[i + 1] - self.dist[i]
-            projected_s = self.dist[i] + u * segment_ds
-            if projected_s + 1e-9 < self.progress_s:
-                continue
-            if best is None or distance < best[0]:
-                best = (distance, i, projected_s, qx, qy)
-
-        # 수치 오차 등으로 후보가 없으면 현재 진행점에서 계속한다.
-        if best is None:
-            qx, qy, i = self._point_at_s(self.progress_s)
-        else:
-            _, i, projected_s, qx, qy = best
-            self.progress_s = max(self.progress_s, projected_s)
-            self.path_idx = i
-
-        target_s = min(self.progress_s + L1, self.dist[-1])
-        target_x, target_y, _ = self._point_at_s(target_s)
-
-        # 투영점에서 lookahead 점까지의 chord를 진행 방향으로 사용한다.
-        tx = target_x - qx
-        ty = target_y - qy
-        tangent_norm = math.hypot(tx, ty)
-        if tangent_norm < 1e-9:
-            ax, ay = self.path[self.path_idx]
-            bx, by = self.path[min(self.path_idx + 1, self.n - 1)]
-            tx, ty = bx - ax, by - ay
-            tangent_norm = max(math.hypot(tx, ty), 1e-9)
-        tx /= tangent_norm
-        ty /= tangent_norm
-
-        # 현재 선분 방향과 lookahead chord의 차이로 코너 강도를 계산한다.
-        ax, ay = self.path[self.path_idx]
-        bx, by = self.path[min(self.path_idx + 1, self.n - 1)]
-        sx, sy = bx - ax, by - ay
-        segment_norm = max(math.hypot(sx, sy), 1e-9)
-        sx, sy = sx / segment_norm, sy / segment_norm
-        turn_angle = abs(math.atan2(sx * ty - sy * tx, sx * tx + sy * ty))
-
-        return qx, qy, target_x, target_y, tx, ty, turn_angle
 
 
 def main():
@@ -263,7 +184,12 @@ def main():
 
     path, dist = load_path(PATH_CSV)
     print(f'경로 로드: {len(path)}개 점, 총 길이 {dist[-1]:.2f}m')
-    guidance = PathGuidance(path, dist)
+    guidance = PathGuidance(
+        path,
+        dist,
+        lookahead_distance=L1,
+        forward_search_distance=FORWARD_SEARCH_DIST_M,
+    )
 
     log_file = open(LOG_CSV, 'w', newline='')
     log_writer = csv.writer(log_file)
