@@ -84,4 +84,4 @@ python3 sitl/coverage_crosstrack_guidance_sim.py <path_csv> <log_csv> [plot_png]
 실제 하드웨어에서도 같은 `07_coverage_crosstrack_guidance_final.py` 유도로 3m x 2m
 사각형 경로와 2.5cm 해상도 커버리지 경로 여러 개를 문제없이 완주했으며, cross-track
 오차는 수 센티미터 수준이었고 기울기나 위치오차로 인한 안전 컷오프는 한 번도 발생하지
-않았습니다 (실비행에서 유일하게 발생한 실패 원인은 배터리 전압 저하였습니다).
+않았습니다.
