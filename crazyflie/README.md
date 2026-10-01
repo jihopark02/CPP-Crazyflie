@@ -24,7 +24,8 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
     ROS2 `/cmd_vel`(Twist)로 이식한 최종 시뮬레이션 스크립트, **코너 감속 기능은 제외** —
     아래 `sitl/results/` 결과가 이 스크립트로 나온 것입니다
   - `plot_sim_error.py` — 시뮬레이션 비행 로그 오차 분석
-  - `worlds/crazyflie_world.sdf` — 장애물 박스 3개가 있는 Gazebo 월드 (장애물 회피 테스트용)
+  - `worlds/crazyflie_world_obs{0,1,3}.sdf` — 시나리오별 Gazebo 월드 (obs0: 장애물 없음,
+    obs1: 장애물 1개, obs3: 장애물 3개). 박스 위치/크기만 다르고 나머지(벽, 바닥, 조명)는 동일
 
 - **`sitl/results/`** — 시나리오별 시뮬레이션 결과 (`obs0`: 장애물 없음, `obs1`: 장애물 1개,
   `obs3`: 장애물 3개). 각각 비행 로그(CSV + 엑셀), 계획 경로와 같은 포맷으로 재추출한
@@ -41,10 +42,17 @@ git clone https://github.com/knmcguire/ros_gz_crazyflie
 cd ~/ros2_ws && colcon build --symlink-install
 ```
 
-이 저장소의 `sitl/worlds/crazyflie_world.sdf`를 그 패키지의
+테스트하려는 시나리오에 맞는 파일을 그 패키지의
 `ros_gz_crazyflie_gazebo/share/ros_gz_crazyflie_gazebo/worlds/crazyflie_world.sdf`
-(install된 복사본)에 덮어씌우면 `obs1`/`obs3` 테스트에 쓰인 넓어진 방 크기와
-장애물 박스 3개가 그대로 적용됩니다.
+(install된 복사본, 파일명은 `crazyflie_world.sdf`로 맞춰야 함)으로 복사하세요.
+
+```bash
+cp sitl/worlds/crazyflie_world_obs1.sdf \
+   ~/ros2_ws/install/ros_gz_crazyflie_gazebo/share/ros_gz_crazyflie_gazebo/worlds/crazyflie_world.sdf
+```
+
+시나리오를 바꿀 때마다 Gazebo를 완전히 종료 후 재시작해야 드론이 스폰 위치로 리셋되고
+새 월드가 반영됩니다 (시뮬레이션 중 리셋 기능은 없음).
 
 이 패키지의 launch 파일은 Gazebo 모델 검색 경로를 설정하지 않은 채
 `model://crazyflie`를 로드해서 기본 상태로는 `Unable to find uri[model://crazyflie]`
