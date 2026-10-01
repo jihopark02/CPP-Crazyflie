@@ -10,28 +10,18 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
   `sitl/`과 `real-flight/`의 실행 파일은 각 환경의 위치 입력과 속도 명령만 담당합니다.
 
 - **`real-flight/`** — ROS2를 거치지 않고 [cflib](https://github.com/bitcraze/crazyflie-lib-python)과
-  vendored NatNet 클라이언트로 실제 드론을 직접 비행시키는 독립 실행 스크립트들입니다.
+  vendored NatNet 클라이언트로 실제 드론을 직접 비행시키는 독립 실행 스크립트입니다.
   위치/자세는 Motive에서 NatNet으로 받아 `extpos`를 통해 온보드 EKF에 주입합니다.
-  파일 번호는 실제로 시도해보는 순서대로 매겨져 있고, 각 단계는 이전 단계 위에 쌓입니다.
-  - `01_takeoff_hover.py` — 기본 이착륙/호버링 동작 확인 (여기부터 시작)
-  - `02_square_motioncommander.py` — cflib의 `MotionCommander`(바디프레임 이동)로 사각형 경로 비행
-  - `03_waypoint_pid_navigation.py` — PID 웨이포인트 순회, 항상 이동 방향을 바라봄
-  - `04_rectangle_l1_guidance.py` — 고전적인 L1 비선형 유도법칙으로 사각형 경로 비행
-  - `05_coverage_l1_guidance.py` — 고전적인 L1 유도로 전체 지그재그(boustrophedon) 커버리지 경로 추종
-  - `06_coverage_crosstrack_guidance.py` — 개선된 유도: 가장 가까운 "점"이 아니라 경로 "선분"에
-    현재 위치를 투영하고, 횡오차(cross-track) P 보정 항을 추가해서 world-frame 속도를
-    드론의 body-frame 속도 명령으로 변환, 코너에서는 자동 감속까지 포함
-  - `07_coverage_crosstrack_guidance_final.py` — 위와 동일한 유도 + 모든 실비행 커버리지
-    테스트에 실제로 사용된 버전; 추정기/아밍 설정과 전체 CSV 로깅까지 추가
+  - `07_coverage_crosstrack_guidance_final.py` — 최종 실비행 유도 스크립트. `tracking/`의
+    `PathGuidance`(선분 투영 + 횡오차 P 보정, 코너 자동감속)를 사용하고, 추정기/아밍 설정과
+    전체 CSV 로깅을 포함. 모든 실비행 커버리지 테스트(obs0/obs1/obs3)에 실제로 사용된 버전
   - `plot_flight_error.py` — 비행 로그 CSV를 읽어서 cross-track/고도 오차를 시간축 그래프로 그림
   - `paths/` — 커버리지 경로 (CSV + 원본 엑셀), 장애물 회피 변형 경로 포함
 
 - **`sitl/`** — 같은 유도 알고리즘을 Gazebo(ros_gz)에서 검증한 코드입니다.
-  - `coverage_l1_guidance_sim.py` — 원래의 고전적 L1 시뮬레이션 하네스 (`05_coverage_l1_guidance.py`와
-    같은 알고리즘을 ROS2 `/cmd_vel`로 이식)
-  - `coverage_crosstrack_guidance_sim.py` — `06`/`07`과 같은 선분투영+횡오차보정 유도를
-    ROS2 `/cmd_vel`(Twist)로 이식한 것, **코너 감속 기능은 제외** — 아래 `sitl/results/` 결과가
-    이 스크립트로 나온 것입니다
+  - `coverage_crosstrack_guidance_sim.py` — `07`과 같은 `PathGuidance`(선분투영+횡오차보정)를
+    ROS2 `/cmd_vel`(Twist)로 이식한 최종 시뮬레이션 스크립트, **코너 감속 기능은 제외** —
+    아래 `sitl/results/` 결과가 이 스크립트로 나온 것입니다
   - `plot_sim_error.py` — 시뮬레이션 비행 로그 오차 분석
   - `worlds/crazyflie_world.sdf` — 장애물 박스 3개가 있는 Gazebo 월드 (장애물 회피 테스트용)
 
@@ -80,7 +70,7 @@ python3 sitl/coverage_crosstrack_guidance_sim.py <path_csv> <log_csv> [plot_png]
    뒤로 튀지 않도록 함
 2. 일정한 경로방향 속도 + 비례(P) 횡오차 보정 속도(최대 횡속도로 제한)를 합성해서
    world frame에서 body frame으로 변환한 속도를 명령
-3. (실비행 `06`/`07`만 해당) 전방 경로 방향이 급격히 바뀌면(코너) 자동으로 감속;
+3. (실비행 `07`만 해당) 전방 경로 방향이 급격히 바뀌면(코너) 자동으로 감속;
    시뮬레이션 이식 버전은 더 단순한 기준선 비교를 위해 이 기능을 뺐음
 
 ## 검증 결과 (시뮬레이션)
