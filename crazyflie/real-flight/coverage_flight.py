@@ -42,7 +42,7 @@ SERVER_IP = '192.168.50.49'
 CLIENT_IP = '192.168.50.236'
 USE_MULTICAST = False
 
-PATH_CSV = os.path.expanduser('~/natnet_ws/coverage_path_obs1_50cm.csv')
+PATH_CSV = os.path.expanduser('~/CPP-Crazyflie/crazyflie/real-flight/paths/path_obs_3.xlsx')
 LOG_CSV = os.path.expanduser('~/natnet_ws/flight_log.csv')
 OUT_PNG = os.path.expanduser('~/natnet_ws/flight_error_plot.png')
 V = 0.2
