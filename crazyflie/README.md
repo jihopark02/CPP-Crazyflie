@@ -81,7 +81,7 @@ python3 sitl/coverage_flight_sim.py <path_csv_or_xlsx> <log_csv> [plot_png] [ox,
 
 **1. 선분 투영** — 가장 가까운 샘플 "점"이 아니라 경로 "선분"에 투영합니다.
 
-$$u = \operatorname{clamp}\!\left(\frac{(P-A)\cdot(B-A)}{\lVert B-A \rVert^2},\ 0,\ 1\right), \qquad Q = A + u\,(B-A)$$
+$$u = \text{clamp}\!\left(\frac{(P-A)\cdot(B-A)}{\lVert B-A \rVert^2},\ 0,\ 1\right), \qquad Q = A + u\,(B-A)$$
 
 **2. 단조증가 진행도** — 투영점의 누적거리(arc-length) $s_{\text{proj}} = s_i + u\,(s_{i+1}-s_i)$ 중
 이전 진행도보다 큰 값만 받아들여서, 급격한 코너에서도 추종 기준점이 뒤로 튀지 않게 합니다.
@@ -106,15 +106,15 @@ $$\begin{bmatrix} v_x^{\text{body}} \\ v_y^{\text{body}} \end{bmatrix} = \begin{
 
 **6. 요(yaw) 명령** — 진행 방향 $\hat t$를 바라보도록 비례 제어합니다 (최대 각속도 $\dot\psi_{\max}$로 제한).
 
-$$\psi_{\text{des}} = \operatorname{atan2}(\hat t_y,\ \hat t_x), \qquad \dot\psi = K_{\text{yaw}}\cdot \operatorname{wrap}(\psi_{\text{des}}-\psi)$$
+$$\psi_{\text{des}} = \text{atan2}(\hat t_y,\ \hat t_x), \qquad \dot\psi = K_{\text{yaw}}\cdot \text{wrap}(\psi_{\text{des}}-\psi)$$
 
 **7. 코너 각도 및 자동 감속** (실비행 `coverage_flight.py`만 해당) — 현재 경로 선분의
 단위방향 $\hat s$와 lookahead 접선 $\hat t$ 사이 각도가 클수록(=코너일수록) 전진속도를 줄입니다.
 시뮬레이션 이식 버전은 더 단순한 기준선 비교를 위해 이 단계를 뺐습니다.
 
-$$\theta_{\text{turn}} = \left|\operatorname{atan2}(\hat s_x \hat t_y - \hat s_y \hat t_x,\ \hat s_x \hat t_x + \hat s_y \hat t_y)\right|$$
+$$\theta_{\text{turn}} = \left|\text{atan2}(\hat s_x \hat t_y - \hat s_y \hat t_x,\ \hat s_x \hat t_x + \hat s_y \hat t_y)\right|$$
 
-$$V_{\text{along}} = V - (V - V_{\min})\cdot \operatorname{clamp}\!\left(\frac{\theta_{\text{turn}}}{\theta_{\text{full}}},\ 0,\ 1\right)$$
+$$V_{\text{along}} = V - (V - V_{\min})\cdot \text{clamp}\!\left(\frac{\theta_{\text{turn}}}{\theta_{\text{full}}},\ 0,\ 1\right)$$
 
 ## 검증 결과 (시뮬레이션)
 
