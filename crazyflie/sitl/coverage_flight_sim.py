@@ -26,8 +26,10 @@ if CRAZYFLIE_ROOT not in sys.path:
 from path_guidance import PathGuidance  # noqa: E402
 
 ROBOT_NS = 'crazyflie'
-PATH_CSV = sys.argv[1] if len(sys.argv) > 1 else '/home/won/robotics/flight_logs/l1_tests/coverage_path.csv'
-LOG_CSV = sys.argv[2] if len(sys.argv) > 2 else '/home/won/robotics/flight_logs/l1_tests/coverage_flight_log_refined_sim.csv'
+PATH_CSV = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser(
+    '~/CPP-Crazyflie/crazyflie/real-flight/paths/path_obs_1.xlsx')
+LOG_CSV = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser(
+    '~/CPP-Crazyflie/crazyflie/sitl/results/obs1/flight_log_obs1.csv')
 PLOT_PNG = sys.argv[3] if len(sys.argv) > 3 else None
 # 시각화용 장애물 표시 (x,y,size) -- 실제 충돌은 Gazebo world의 obstacle_* 모델이 담당, 이건 그림용
 OBSTACLES = [tuple(float(v) for v in o.split(',')) for o in sys.argv[4:]] if len(sys.argv) > 4 else []
