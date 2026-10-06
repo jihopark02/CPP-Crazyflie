@@ -33,10 +33,10 @@ PLOT_PNG = sys.argv[3] if len(sys.argv) > 3 else None
 OBSTACLES = [tuple(float(v) for v in o.split(',')) for o in sys.argv[4:]] if len(sys.argv) > 4 else []
 ORIGIN_X = 0.0
 ORIGIN_Y = 0.0
-V = 0.08
+V = 0.2
 L1 = 0.15
-GOAL_RADIUS = 0.12
-CONTROL_HZ = 10.0
+GOAL_RADIUS = 0.15
+CONTROL_HZ = 20.0
 HOVER_HEIGHT = 0.5
 FORWARD_SEARCH_DIST_M = 0.35
 
@@ -52,12 +52,32 @@ def clamp(value, low, high):
     return max(low, min(high, value))
 
 
-def load_path(csv_path, origin_x, origin_y):
+def _pick(header, *names):
+    for name in names:
+        if name in header:
+            return header.index(name)
+    return None
+
+
+def load_path(path_file, origin_x, origin_y):
     pts, dists = [], []
-    with open(csv_path) as f:
-        for row in csv.DictReader(f):
-            pts.append((origin_x + float(row['x']), origin_y + float(row['y'])))
-            dists.append(float(row['dist']) if row.get('dist') not in (None, '') else None)
+    if path_file.lower().endswith('.xlsx'):
+        import openpyxl
+        wb = openpyxl.load_workbook(path_file, data_only=True)
+        ws = wb['path'] if 'path' in wb.sheetnames else wb.worksheets[0]
+        rows = list(ws.iter_rows(values_only=True))
+        header = list(rows[0])
+        ix = _pick(header, 'x', 'x_m')
+        iy = _pick(header, 'y', 'y_m')
+        idist = _pick(header, 'dist', 'dist_along_path_m')
+        for row in rows[1:]:
+            pts.append((origin_x + float(row[ix]), origin_y + float(row[iy])))
+            dists.append(float(row[idist]) if idist is not None else None)
+    else:
+        with open(path_file) as f:
+            for row in csv.DictReader(f):
+                pts.append((origin_x + float(row['x']), origin_y + float(row['y'])))
+                dists.append(float(row['dist']) if row.get('dist') not in (None, '') else None)
     if any(d is None for d in dists):
         dists = [0.0]
         for i in range(1, len(pts)):

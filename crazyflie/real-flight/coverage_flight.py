@@ -78,12 +78,36 @@ def clamp(value, low, high):
     return max(low, min(high, value))
 
 
-def load_path(csv_path):
+def _pick(header, *names):
+    for name in names:
+        if name in header:
+            return header.index(name)
+    return None
+
+
+def load_path(path_file):
     pts, dists = [], []
-    with open(csv_path) as f:
-        for row in csv.DictReader(f):
-            pts.append((float(row['x']), float(row['y'])))
-            dists.append(float(row['dist']))
+    if path_file.lower().endswith('.xlsx'):
+        import openpyxl
+        wb = openpyxl.load_workbook(path_file, data_only=True)
+        ws = wb['path'] if 'path' in wb.sheetnames else wb.worksheets[0]
+        rows = list(ws.iter_rows(values_only=True))
+        header = list(rows[0])
+        ix = _pick(header, 'x', 'x_m')
+        iy = _pick(header, 'y', 'y_m')
+        idist = _pick(header, 'dist', 'dist_along_path_m')
+        for row in rows[1:]:
+            pts.append((float(row[ix]), float(row[iy])))
+            dists.append(float(row[idist]) if idist is not None else None)
+    else:
+        with open(path_file) as f:
+            for row in csv.DictReader(f):
+                pts.append((float(row['x']), float(row['y'])))
+                dists.append(float(row['dist']))
+    if any(d is None for d in dists):
+        dists = [0.0]
+        for i in range(1, len(pts)):
+            dists.append(dists[-1] + math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]))
     if len(pts) < 2:
         raise ValueError('경로에는 최소 2개 점이 필요합니다')
     return pts, dists

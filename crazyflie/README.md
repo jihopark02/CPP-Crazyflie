@@ -16,7 +16,8 @@ OptiTrack/NatNet 모션캡쳐로 위치를 추적하는 Bitcraze Crazyflie(cf231
     경로 투영점과 진행 방향을 이용해 횡오차 P 보정, 코너 감속 및 속도 명령을 수행하며,
     추정기/아밍 설정과 전체 CSV 로깅을 포함. 모든 실비행 테스트(obs0/obs1/obs3)에 사용된 버전
   - `plot_flight_error.py` — 비행 로그 CSV를 읽어서 cross-track/고도 오차를 시간축 그래프로 그림
-  - `paths/` — obs0/obs1/obs3 커버리지 경로 CSV
+  - `paths/` — obs0/obs1/obs3 커버리지 경로 CSV (CPP가 생성한 원본 `.xlsx`를 바로 불러와도 됨 —
+    `load_path()`가 확장자를 보고 CSV/xlsx 둘 다 처리함)
   - `results/` — obs0/obs1/obs3 실비행 결과 (비행 로그 CSV, 궤적 및 오차 그래프)
 
 - **`sitl/`** — 같은 유도 알고리즘을 Gazebo(ros_gz)에서 검증한 코드입니다.
@@ -67,19 +68,53 @@ ros2 launch ros_gz_crazyflie_bringup crazyflie_simulation.launch.py
 그 다음 다른 터미널에서:
 
 ```bash
-python3 sitl/coverage_flight_sim.py <path_csv> <log_csv> [plot_png] [ox,oy,size ...]
+python3 sitl/coverage_flight_sim.py <path_csv_or_xlsx> <log_csv> [plot_png] [ox,oy,size ...]
 ```
+
+`V`, `GOAL_RADIUS`, `CONTROL_HZ`는 실비행 `coverage_flight.py`와 동일한 값(0.2 m/s, 0.15 m,
+20 Hz)으로 맞춰져 있어, 코너 감속 기능 유무를 빼면 실비행과 같은 조건으로 비교할 수 있습니다.
 
 ## 유도 알고리즘
 
-실비행/시뮬레이션 유도 컨트롤러 모두 다음과 같이 동작합니다.
-1. 드론의 현재 위치를 계획 경로의 가장 가까운 "선분"에 투영 (가장 가까운 샘플 점이 아님),
-   누적거리(arc-length) 진행도 `s`를 단조증가로 추적해서 급격한 코너에서도 추종 기준점이
-   뒤로 튀지 않도록 함
-2. 일정한 경로방향 속도 + 비례(P) 횡오차 보정 속도(최대 횡속도로 제한)를 합성해서
-   world frame에서 body frame으로 변환한 속도를 명령
-3. (실비행 `coverage_flight.py`만 해당) 전방 경로 방향이 급격히 바뀌면(코너) 자동으로 감속;
-   시뮬레이션 이식 버전은 더 단순한 기준선 비교를 위해 이 기능을 뺐음
+`path_guidance.py`의 `PathGuidance`가 계산하는 내용을 수식으로 정리하면 다음과 같습니다.
+드론 현재 위치를 $P=(x,y)$, 경로상 인접 두 점을 $A,\,B$, 현재 요(yaw)를 $\psi$라 합니다.
+
+**1. 선분 투영** — 가장 가까운 샘플 "점"이 아니라 경로 "선분"에 투영합니다.
+
+$$u = \operatorname{clamp}\!\left(\frac{(P-A)\cdot(B-A)}{\lVert B-A \rVert^2},\ 0,\ 1\right), \qquad Q = A + u\,(B-A)$$
+
+**2. 단조증가 진행도** — 투영점의 누적거리(arc-length) $s_{\text{proj}} = s_i + u\,(s_{i+1}-s_i)$ 중
+이전 진행도보다 큰 값만 받아들여서, 급격한 코너에서도 추종 기준점이 뒤로 튀지 않게 합니다.
+
+$$s \leftarrow \max(s,\ s_{\text{proj}})$$
+
+**3. Lookahead 목표점과 접선 방향** — 진행도 기준 $L_1$ 앞의 경로점을 목표로 삼고,
+투영점 $Q$에서 그 목표점 $T$까지의 단위벡터를 진행 방향으로 사용합니다.
+
+$$T = \text{path}(\min(s+L_1,\ s_{\max})), \qquad \hat t = \frac{T-Q}{\lVert T-Q \rVert}$$
+
+**4. 횡오차(cross-track) P 보정 + 속도 합성** — 일정한 전진속도 $V$에 투영점으로 되돌아가는
+비례(P) 보정속도를 더합니다 (각각 최대 횡속도 $v_{\max}$, 합성속도로 제한).
+
+$$v_{\text{corr}} = K_p\,(Q - P),\quad \lVert v_{\text{corr}} \rVert \le v_{\max}$$
+
+$$v_{\text{world}} = V\,\hat t + v_{\text{corr}},\quad \lVert v_{\text{world}} \rVert \le \sqrt{V^2+v_{\max}^2}$$
+
+**5. World → body frame 변환** — $\psi$만큼 회전시켜 드론이 받는 속도 명령으로 변환합니다.
+
+$$\begin{bmatrix} v_x^{\text{body}} \\ v_y^{\text{body}} \end{bmatrix} = \begin{bmatrix} \cos\psi & \sin\psi \\ -\sin\psi & \cos\psi \end{bmatrix} \begin{bmatrix} v_x^{\text{world}} \\ v_y^{\text{world}} \end{bmatrix}$$
+
+**6. 요(yaw) 명령** — 진행 방향 $\hat t$를 바라보도록 비례 제어합니다 (최대 각속도 $\dot\psi_{\max}$로 제한).
+
+$$\psi_{\text{des}} = \operatorname{atan2}(\hat t_y,\ \hat t_x), \qquad \dot\psi = K_{\text{yaw}}\cdot \operatorname{wrap}(\psi_{\text{des}}-\psi)$$
+
+**7. 코너 각도 및 자동 감속** (실비행 `coverage_flight.py`만 해당) — 현재 경로 선분의
+단위방향 $\hat s$와 lookahead 접선 $\hat t$ 사이 각도가 클수록(=코너일수록) 전진속도를 줄입니다.
+시뮬레이션 이식 버전은 더 단순한 기준선 비교를 위해 이 단계를 뺐습니다.
+
+$$\theta_{\text{turn}} = \left|\operatorname{atan2}(\hat s_x \hat t_y - \hat s_y \hat t_x,\ \hat s_x \hat t_x + \hat s_y \hat t_y)\right|$$
+
+$$V_{\text{along}} = V - (V - V_{\min})\cdot \operatorname{clamp}\!\left(\frac{\theta_{\text{turn}}}{\theta_{\text{full}}},\ 0,\ 1\right)$$
 
 ## 검증 결과 (시뮬레이션)
 
