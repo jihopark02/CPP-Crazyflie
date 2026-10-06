@@ -120,9 +120,9 @@ $$V_{\text{along}} = V - (V - V_{\min})\cdot \operatorname{clamp}\!\left(\frac{\
 
 | 시나리오 | 장애물 | 결과 | 평균 cross-track error |
 |---|---|---|---|
-| obs0 | 없음 | 완주 | 약 0.8 cm |
-| obs1 | 1개 | 완주, 최소 이격거리 약 22 cm | 약 1.0 cm |
-| obs3 | 3개 | 완주, 최소 이격거리 약 22 cm | 약 1.1 cm |
+| obs0 | 없음 | 완주 | 약 1.7 cm |
+| obs1 | 1개 | 완주, 최소 이격거리 약 21.5 cm | 약 2.2 cm |
+| obs3 | 3개 | 완주, 최소 이격거리 약 20.3 cm | 약 2.4 cm |
 
 ## 검증 결과 (실비행)
 
