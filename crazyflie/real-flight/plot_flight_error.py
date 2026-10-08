@@ -12,14 +12,25 @@ HOVER_HEIGHT = 0.5
 OUT_PNG = os.path.expanduser('~/natnet_ws/flight_error_plot.png')
 
 
+def load_rows(log_path):
+    if log_path.lower().endswith('.xlsx'):
+        import openpyxl
+        wb = openpyxl.load_workbook(log_path, data_only=True)
+        ws = wb.worksheets[0]
+        rows = list(ws.iter_rows(values_only=True))
+        header = list(rows[0])
+        return [dict(zip(header, row)) for row in rows[1:]]
+    with open(log_path) as f:
+        return list(csv.DictReader(f))
+
+
 def main():
     csv_path = sys.argv[1] if len(sys.argv) > 1 else LOG_CSV
     t, cross_track, z_err = [], [], []
-    with open(csv_path) as f:
-        for row in csv.DictReader(f):
-            t.append(float(row['t']))
-            cross_track.append(float(row['cross_track_err']))
-            z_err.append(float(row['z']) - HOVER_HEIGHT)
+    for row in load_rows(csv_path):
+        t.append(float(row['t']))
+        cross_track.append(float(row['cross_track_err']))
+        z_err.append(float(row['z']) - HOVER_HEIGHT)
 
     print(f'{len(t)}개 샘플 로드 ({csv_path})')
     print(f'cross-track error: 평균 {sum(cross_track)/len(cross_track):.3f}m, 최대 {max(cross_track):.3f}m')
